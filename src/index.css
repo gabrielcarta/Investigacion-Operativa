@@ -1,0 +1,26 @@
+@import "tailwindcss";
+
+/* Evitar scrollbars durante la carga */
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+}
+
+#root {
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+}
+
+/* Habilitar scroll después de la carga */
+.loading-complete {
+  overflow: auto !important;
+}
+
+/* Asegurar que no haya desbordamiento horizontal */
+* {
+  box-sizing: border-box;
+}
