@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import reactLogo from './assets/react.svg'
 import viteLogo from './assets/vite.svg'
 import unjbgLogo from './assets/unjbg.png'
+import mainBg from './assets/main.jpeg'
 
 // Importar páginas
 import Home from './pages/Home'
@@ -149,7 +150,8 @@ function App() {
       </motion.div>
 
       <div 
-        className="h-screen w-screen bg-[url('/backgrounds/main.jpeg')] bg-cover bg-center flex flex-col items-center justify-center relative"
+        className="h-screen w-screen bg-cover bg-center flex flex-col items-center justify-center relative"
+        style={{ backgroundImage: `url(${mainBg})` }}
       >
         {/* Partículas de fondo globales - NO INTERFIEREN CON CLICKS */}
         <div className="absolute inset-0 pointer-events-none overflow-hidden">
