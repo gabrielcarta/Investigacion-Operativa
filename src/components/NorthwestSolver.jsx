@@ -1,8 +1,8 @@
 import { motion } from 'framer-motion'
 import { Calculator, Play, RotateCcw, Plus, Minus } from 'lucide-react'
-import { useState, useCallback, useMemo, memo } from 'react'
+import { useState } from 'react'
 
-const NorthwestSolver = memo(() => {
+const NorthwestSolver = () => {
   const [sources, setSources] = useState(3)
   const [destinations, setDestinations] = useState(4)
   const [costs, setCosts] = useState(Array(3).fill().map(() => Array(4).fill('')))
@@ -11,74 +11,57 @@ const NorthwestSolver = memo(() => {
   const [result, setResult] = useState(null)
   const [showResult, setShowResult] = useState(false)
 
-  // Optimizar adjustSize con useCallback profundo
-  const adjustSize = useCallback((type, operation) => {
+  const adjustSize = (type, operation) => {
     if (type === 'sources') {
       const newSize = operation === 'add' ? sources + 1 : Math.max(2, sources - 1)
       setSources(newSize)
       if (operation === 'add') {
-        setCosts(prev => [...prev, Array(destinations).fill('')])
-        setSupply(prev => [...prev, ''])
+        setCosts([...costs, Array(destinations).fill('')])
+        setSupply([...supply, ''])
       } else {
-        setCosts(prev => prev.slice(0, -1))
-        setSupply(prev => prev.slice(0, -1))
+        setCosts(costs.slice(0, -1))
+        setSupply(supply.slice(0, -1))
       }
     } else {
       const newSize = operation === 'add' ? destinations + 1 : Math.max(2, destinations - 1)
       setDestinations(newSize)
       if (operation === 'add') {
-        setCosts(prev => prev.map(row => [...row, '']))
-        setDemand(prev => [...prev, ''])
+        setCosts(costs.map(row => [...row, '']))
+        setDemand([...demand, ''])
       } else {
-        setCosts(prev => prev.map(row => row.slice(0, -1)))
-        setDemand(prev => prev.slice(0, -1))
+        setCosts(costs.map(row => row.slice(0, -1)))
+        setDemand(demand.slice(0, -1))
       }
     }
-  }, [sources, destinations])
+  }
 
-  // Optimizar updateCosts con verificación de cambios
-  const updateCosts = useCallback((i, j, value) => {
-    setCosts(prev => {
-      if (prev[i][j] === value) return prev
-      const newCosts = prev.map((row, rowIndex) => 
-        rowIndex === i 
-          ? row.map((cell, colIndex) => colIndex === j ? value : cell)
-          : row
-      )
-      return newCosts
-    })
-  }, [])
+  const updateCosts = (i, j, value) => {
+    const newCosts = [...costs]
+    newCosts[i][j] = value
+    setCosts(newCosts)
+  }
 
-  // Optimizar updateSupply
-  const updateSupply = useCallback((i, value) => {
-    setSupply(prev => {
-      if (prev[i] === value) return prev
-      const newSupply = [...prev]
-      newSupply[i] = value
-      return newSupply
-    })
-  }, [])
+  const updateSupply = (i, value) => {
+    const newSupply = [...supply]
+    newSupply[i] = value
+    setSupply(newSupply)
+  }
 
-  // Optimizar updateDemand
-  const updateDemand = useCallback((j, value) => {
-    setDemand(prev => {
-      if (prev[j] === value) return prev
-      const newDemand = [...prev]
-      newDemand[j] = value
-      return newDemand
-    })
-  }, [])
+  const updateDemand = (j, value) => {
+    const newDemand = [...demand]
+    newDemand[j] = value
+    setDemand(newDemand)
+  }
 
-  const reset = useCallback(() => {
+  const reset = () => {
     setCosts(Array(sources).fill().map(() => Array(destinations).fill('')))
     setSupply(Array(sources).fill(''))
     setDemand(Array(destinations).fill(''))
     setResult(null)
     setShowResult(false)
-  }, [sources, destinations])
+  }
 
-  // Optimizar el algoritmo pesado con requestAnimationFrame
-  const solveNorthwestCorner = useCallback(() => {
+  const solveNorthwestCorner = () => {
     const costMatrix = costs.map(row => row.map(cell => parseFloat(cell) || 0))
     const supplyArray = supply.map(s => parseFloat(s) || 0)
     const demandArray = demand.map(d => parseFloat(d) || 0)
@@ -92,71 +75,64 @@ const NorthwestSolver = memo(() => {
       return
     }
 
-    // Usar requestAnimationFrame para no bloquear el UI
-    requestAnimationFrame(() => {
-      const iterations = []
-      let currentSupply = [...supplyArray]
-      let currentDemand = [...demandArray]
-      let allocation = Array(sources).fill().map(() => Array(destinations).fill(0))
-      let i = 0, j = 0
+    const iterations = []
+    let currentSupply = [...supplyArray]
+    let currentDemand = [...demandArray]
+    let allocation = Array(sources).fill().map(() => Array(destinations).fill(0))
+    let i = 0, j = 0
 
-      // Proceso de asignación Esquina Noroeste
-      while (i < sources && j < destinations) {
-        const allocatedAmount = Math.min(currentSupply[i], currentDemand[j])
-        allocation[i][j] = allocatedAmount
+    // Proceso de asignación Esquina Noroeste
+    while (i < sources && j < destinations) {
+      const allocatedAmount = Math.min(currentSupply[i], currentDemand[j])
+      allocation[i][j] = allocatedAmount
 
-        currentSupply[i] -= allocatedAmount
-        currentDemand[j] -= allocatedAmount
+      currentSupply[i] -= allocatedAmount
+      currentDemand[j] -= allocatedAmount
 
-        // Guardar iteración
-        iterations.push({
-          step: iterations.length + 1,
-          allocation: allocation.map(row => [...row]),
-          supply: [...currentSupply],
-          demand: [...currentDemand],
-          currentCell: { i, j },
-          allocatedAmount,
-          description: `Asignar ${allocatedAmount} unidades a celda (${i + 1}, ${j + 1})`
-        })
-
-        // Mover a la siguiente celda según regla de Esquina Noroeste
-        if (currentSupply[i] === 0) {
-          i++
-        } else {
-          j++
-        }
-      }
-
-      // Calcular costo total
-      let totalCost = 0
-      for (let i = 0; i < sources; i++) {
-        for (let j = 0; j < destinations; j++) {
-          totalCost += allocation[i][j] * costMatrix[i][j]
-        }
-      }
-
-      setResult({
-        iterations,
-        finalAllocation: allocation,
-        totalCost,
-        costMatrix,
-        originalSupply: supplyArray,
-        originalDemand: demandArray
+      // Guardar iteración
+      iterations.push({
+        step: iterations.length + 1,
+        allocation: allocation.map(row => [...row]),
+        supply: [...currentSupply],
+        demand: [...currentDemand],
+        currentCell: { i, j },
+        allocatedAmount,
+        description: `Asignar ${allocatedAmount} unidades a celda (${i + 1}, ${j + 1})`
       })
-      setShowResult(true)
-    })
-  }, [costs, supply, demand, sources, destinations])
 
-  // Memoizar validación de entrada
-  const isValidInput = useMemo(() => {
-    if (!costs.length || !supply.length || !demand.length) return false
-    
+      // Mover a la siguiente celda según regla de Esquina Noroeste
+      if (currentSupply[i] === 0) {
+        i++
+      } else {
+        j++
+      }
+    }
+
+    // Calcular costo total
+    let totalCost = 0
+    for (let i = 0; i < sources; i++) {
+      for (let j = 0; j < destinations; j++) {
+        totalCost += allocation[i][j] * costMatrix[i][j]
+      }
+    }
+
+    setResult({
+      iterations,
+      finalAllocation: allocation,
+      totalCost,
+      costMatrix,
+      originalSupply: supplyArray,
+      originalDemand: demandArray
+    })
+    setShowResult(true)
+  }
+
+  const isValidInput = () => {
     const costsValid = costs.every(row => row.every(cell => cell !== '' && !isNaN(parseFloat(cell))))
     const supplyValid = supply.every(s => s !== '' && !isNaN(parseFloat(s)))
     const demandValid = demand.every(d => d !== '' && !isNaN(parseFloat(d)))
-    
     return costsValid && supplyValid && demandValid
-  }, [costs, supply, demand])
+  }
 
   if (showResult) {
     return (
@@ -467,8 +443,6 @@ const NorthwestSolver = memo(() => {
       </div>
     </motion.div>
   )
-})
-
-NorthwestSolver.displayName = 'NorthwestSolver'
+}
 
 export default NorthwestSolver
