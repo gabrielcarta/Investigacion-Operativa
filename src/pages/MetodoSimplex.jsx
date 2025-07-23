@@ -2,6 +2,7 @@ import { motion } from 'framer-motion'
 import { ArrowLeft } from 'lucide-react'
 import { useState } from 'react'
 import TableGenerator from '../components/TableGenerator'
+import SimplexSolver from '../components/SimplexSolver'
 
 const MetodoSimplex = ({ onBack }) => {
   const [problemData, setProblemData] = useState(null)
@@ -82,33 +83,8 @@ const MetodoSimplex = ({ onBack }) => {
         {/* Componente de generación de tabla */}
         <TableGenerator onDataChange={handleDataChange} />
 
-        {/* Área de trabajo del Simplex */}
-        <motion.div 
-          className="bg-white/5 backdrop-blur-sm rounded-2xl p-8 border border-white/10 text-center"
-          initial={{ opacity: 0, y: 50 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.8 }}
-        >
-          <h3 className="text-2xl font-bold text-white mb-6">🔧 Calculadora Simplex</h3>
-          {problemData ? (
-            <div className="bg-white/10 rounded-lg p-8">
-              <p className="text-gray-300 text-lg mb-4">📊 Datos del problema configurados</p>
-              <p className="text-white mb-2">Variables: {problemData.numVariables}</p>
-              <p className="text-white mb-4">Restricciones: {problemData.numRestricciones}</p>
-              <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-4">
-                <p className="text-yellow-300 font-bold">🚧 Implementación en proceso</p>
-                <p className="text-gray-300 text-sm mt-2">
-                  El algoritmo Simplex completo estará disponible próximamente
-                </p>
-              </div>
-            </div>
-          ) : (
-            <div className="bg-white/10 rounded-lg p-8">
-              <div className="text-4xl mb-4">📝</div>
-              <p className="text-gray-300 text-lg">Configure el problema en la tabla superior</p>
-            </div>
-          )}
-        </motion.div>
+        {/* Componente de resolución Simplex */}
+        <SimplexSolver problemData={problemData} />
       </div>
     </motion.div>
   )
