@@ -1,15 +1,15 @@
 import { motion } from 'framer-motion'
 import { ArrowLeft } from 'lucide-react'
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import TableGenerator from '../components/TableGenerator'
 import SimplexSolver from '../components/SimplexSolver'
 
 const MetodoSimplex = ({ onBack }) => {
   const [problemData, setProblemData] = useState(null)
 
-  const handleDataChange = (data) => {
+  const handleDataChange = useCallback((data) => {
     setProblemData(data)
-  }
+  }, [])
 
   return (
     <motion.div 

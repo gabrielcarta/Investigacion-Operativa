@@ -39,7 +39,7 @@ const TableGenerator = ({ onDataChange }) => {
       restricciones
     }
     onDataChange && onDataChange(data)
-  }, [numVariables, numRestricciones, tipoZ, zCoeffs, restricciones, onDataChange])
+  }, [numVariables, numRestricciones, tipoZ, zCoeffs, restricciones])
 
   const updateZCoeff = (index, value) => {
     const newZCoeffs = [...zCoeffs]

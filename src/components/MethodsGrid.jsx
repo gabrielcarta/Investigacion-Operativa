@@ -12,6 +12,7 @@ const MethodsGrid = ({ onMethodSelect }) => {
       console.error('onMethodSelect is not defined!')
     }
   }
+  
   const methods = [
     {
       id: 1,
@@ -39,6 +40,22 @@ const MethodsGrid = ({ onMethodSelect }) => {
     },
     {
       id: 4,
+      title: "Método de la Gran M",
+      description: "Técnica para problemas con restricciones de igualdad y mayor igual",
+      icon: "🔺",
+      difficulty: "Intermedio",
+      path: "gran-m"
+    },
+    {
+      id: 5,
+      title: "Programación Binaria",
+      description: "Optimización con variables de decisión binarias (0 o 1)",
+      icon: "⚡",
+      difficulty: "Avanzado",
+      path: "binario"
+    },
+    {
+      id: 6,
       title: "Método Húngaro",
       description: "Optimización de asignación de tareas y recursos",
       icon: "🎯",
@@ -46,20 +63,12 @@ const MethodsGrid = ({ onMethodSelect }) => {
       path: "hungaro"
     },
     {
-      id: 5,
+      id: 7,
       title: "Esquina Noroeste",
       description: "Método heurístico para problemas de transporte",
       icon: "🧭",
       difficulty: "Básico",
       path: "noroeste"
-    },
-    {
-      id: 6,
-      title: "Método MODI",
-      description: "Optimización avanzada para problemas de transporte",
-      icon: "🚛",
-      difficulty: "Avanzado",
-      path: "modi"
     }
   ]
 
@@ -70,30 +79,44 @@ const MethodsGrid = ({ onMethodSelect }) => {
       animate={{ opacity: 1 }}
       transition={{ duration: 0.6, delay: 0 }}
     >
-      {/* Título principal */}
+      {/* Descripción académica */}
       <motion.div 
-        className="text-center mb-12 mt-16"
-        initial={{ opacity: 0, y: -30 }}
+        className="bg-white/5 backdrop-blur-sm rounded-2xl p-8 border border-white/10 mb-12"
+        initial={{ opacity: 0, y: 50 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6, ease: "backOut" }}
+        transition={{ duration: 0.6, delay: 0.2 }}
       >
-        <h1 className="text-5xl font-bold text-white mb-4 bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-600 bg-clip-text text-transparent">
-          Métodos de Optimización
-        </h1>
-        <p className="text-xl text-gray-300 max-w-2xl mx-auto leading-relaxed">
-          Explora los principales algoritmos de investigación operativa
-        </p>
-        
-        {/* Línea decorativa */}
-        <motion.div 
-          className="w-32 h-1 bg-gradient-to-r from-cyan-500 to-purple-600 mx-auto mt-6 rounded-full"
-          initial={{ width: 0 }}
-          animate={{ width: 128 }}
-          transition={{ duration: 0.8, delay: 0.2 }}
-        />
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-white mb-4">Universidad Nacional Jorge Basadre Grohmann</h2>
+          <p className="text-lg text-gray-300 mb-6">
+            Esta aplicación presenta los métodos más importantes de la Investigación Operativa, 
+            una disciplina que aplica técnicas matemáticas avanzadas para resolver problemas 
+            complejos de optimización en la toma de decisiones.
+          </p>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8">
+            <div className="text-center p-4 bg-white/5 rounded-lg">
+              <div className="text-3xl mb-2">🎯</div>
+              <h3 className="text-white font-semibold mb-2">Optimización</h3>
+              <p className="text-gray-400 text-sm">Encuentra la mejor solución entre múltiples alternativas</p>
+            </div>
+            
+            <div className="text-center p-4 bg-white/5 rounded-lg">
+              <div className="text-3xl mb-2">📐</div>
+              <h3 className="text-white font-semibold mb-2">Matemática Aplicada</h3>
+              <p className="text-gray-400 text-sm">Utiliza modelos matemáticos para resolver problemas reales</p>
+            </div>
+            
+            <div className="text-center p-4 bg-white/5 rounded-lg">
+              <div className="text-3xl mb-2">💼</div>
+              <h3 className="text-white font-semibold mb-2">Decisiones Estratégicas</h3>
+              <p className="text-gray-400 text-sm">Herramientas para la gestión eficiente de recursos</p>
+            </div>
+          </div>
+        </div>
       </motion.div>
 
-      {/* Grid de métodos - SIN ANIMACIONES COMPLICADAS */}
+      {/* Grid de métodos */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
         {methods.map((method, index) => (
           <div
@@ -210,25 +233,59 @@ const MethodsGrid = ({ onMethodSelect }) => {
         ))}
       </div>
 
-      {/* Estadísticas */}
+      {/* Información adicional */}
       <motion.div 
-        className="grid grid-cols-3 gap-6 max-w-2xl mx-auto"
-        initial={{ opacity: 0, y: 30 }}
+        className="bg-gradient-to-r from-blue-500/10 to-purple-500/10 rounded-2xl p-8 border border-blue-500/20 text-center mb-16"
+        initial={{ opacity: 0, y: 50 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6, delay: 0.4 }}
+        transition={{ duration: 0.6, delay: 1.0 }}
       >
-        <div className="text-center">
-          <div className="text-3xl font-bold text-cyan-400 mb-2">6</div>
-          <div className="text-sm text-gray-400">Métodos</div>
+        <h3 className="text-2xl font-bold text-white mb-4">💡 ¿Por qué Investigación Operativa?</h3>
+        <p className="text-gray-300 text-lg mb-6">
+          La Investigación Operativa es fundamental para ingenieros, administradores y analistas 
+          que buscan optimizar procesos, minimizar costos y maximizar eficiencia en organizaciones complejas.
+        </p>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="bg-white/5 p-4 rounded-lg">
+            <div className="text-2xl mb-2">🏭</div>
+            <h4 className="text-white font-semibold">Industria</h4>
+            <p className="text-gray-400 text-sm">Optimización de procesos productivos</p>
+          </div>
+          
+          <div className="bg-white/5 p-4 rounded-lg">
+            <div className="text-2xl mb-2">🚛</div>
+            <h4 className="text-white font-semibold">Logística</h4>
+            <p className="text-gray-400 text-sm">Gestión eficiente de cadenas de suministro</p>
+          </div>
+          
+          <div className="bg-white/5 p-4 rounded-lg">
+            <div className="text-2xl mb-2">💰</div>
+            <h4 className="text-white font-semibold">Finanzas</h4>
+            <p className="text-gray-400 text-sm">Optimización de portafolios de inversión</p>
+          </div>
+          
+          <div className="bg-white/5 p-4 rounded-lg">
+            <div className="text-2xl mb-2">🏥</div>
+            <h4 className="text-white font-semibold">Servicios</h4>
+            <p className="text-gray-400 text-sm">Programación óptima de recursos</p>
+          </div>
         </div>
-        <div className="text-center">
-          <div className="text-3xl font-bold text-purple-400 mb-2">∞</div>
-          <div className="text-sm text-gray-400">Soluciones</div>
-        </div>
-        <div className="text-center">
-          <div className="text-3xl font-bold text-blue-400 mb-2">100%</div>
-          <div className="text-sm text-gray-400">Precisión</div>
-        </div>
+      </motion.div>
+
+      {/* Footer */}
+      <motion.div 
+        className="text-center pb-8"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.6, delay: 1.2 }}
+      >
+        <p className="text-gray-400 mb-2">
+          Desarrollado para el aprendizaje de Investigación Operativa
+        </p>
+        <p className="text-gray-500 text-sm">
+          Universidad Nacional Jorge Basadre Grohmann - Tacna, Perú
+        </p>
       </motion.div>
     </motion.div>
   )

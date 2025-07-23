@@ -3,7 +3,7 @@ import { motion } from 'framer-motion'
 const SimpleMethodCard = ({ method, index, onClick }) => {
   return (
     <motion.div
-      className="relative group cursor-pointer bg-gradient-to-br from-blue-600/20 via-purple-600/20 to-cyan-600/20 backdrop-blur-sm border border-white/10 rounded-2xl p-6 h-56 hover:border-white/30 transition-all duration-300"
+      className="relative group cursor-pointer bg-gradient-to-br from-blue-600/20 via-purple-600/20 to-cyan-600/20 backdrop-blur-sm border border-white/10 rounded-2xl p-6 h-56 hover:border-white/30 transition-all duration-150"
       initial={{ opacity: 0, scale: 0.9 }}
       animate={{ opacity: 1, scale: 1 }}
       transition={{ 
@@ -11,8 +11,14 @@ const SimpleMethodCard = ({ method, index, onClick }) => {
         delay: index * 0.05, 
         ease: "easeOut"
       }}
-      whileHover={{ scale: 1.05 }}
-      whileTap={{ scale: 0.98 }}
+      whileHover={{ 
+        scale: 1.05,
+        transition: { duration: 0.15, ease: "easeOut" }
+      }}
+      whileTap={{ 
+        scale: 0.98,
+        transition: { duration: 0.1 }
+      }}
       onClick={(e) => {
         e.preventDefault()
         e.stopPropagation()
@@ -29,7 +35,7 @@ const SimpleMethodCard = ({ method, index, onClick }) => {
         {/* Icono y título */}
         <div>
           <div className="text-4xl mb-3">{method.icon}</div>
-          <h3 className="text-lg font-bold text-white mb-2 group-hover:text-cyan-300 transition-colors duration-300">
+          <h3 className="text-lg font-bold text-white mb-2 group-hover:text-cyan-300 transition-colors duration-150">
             {method.title}
           </h3>
         </div>

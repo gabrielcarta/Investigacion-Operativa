@@ -150,7 +150,7 @@ const SimplexSolver = ({ problemData }) => {
 
     setSolution({
       tipo: 'optima',
-      valorZ: tipoZ === 'min' ? valorZ : -valorZ,
+      valorZ: valorZ,
       variables: variables,
       iteraciones: iteration
     })
@@ -230,7 +230,7 @@ const SimplexSolver = ({ problemData }) => {
                     className="bg-white/5 rounded-lg p-4"
                   >
                     <h5 className="text-lg font-semibold text-blue-400 mb-3">
-                      {iter.numero === 0 ? 'Tableau Inicial' : `Iteración ${iter.numero}`}
+                      {iter.numero === 0 ? 'Tabla Inicial' : `Iteración ${iter.numero}`}
                     </h5>
                     {generateTableHTML(iter.tableau)}
                   </motion.div>

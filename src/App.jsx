@@ -10,9 +10,10 @@ import Home from './pages/Home'
 import MetodoGrafico from './pages/MetodoGrafico'
 import MetodoSimplex from './pages/MetodoSimplex'
 import SimplexDual from './pages/SimplexDual'
+import MetodoGranM from './pages/MetodoGranM'
+import MetodoBinario from './pages/MetodoBinario'
 import MetodoHungaro from './pages/MetodoHungaro'
 import EsquinaNoroeste from './pages/EsquinaNoroeste'
-import MetodoModi from './pages/MetodoModi'
 
 function App() {
   const [currentPage, setCurrentPage] = useState('home')
@@ -40,12 +41,14 @@ function App() {
         return <MetodoSimplex onBack={handleBackToHome} />
       case 'simplex-dual':
         return <SimplexDual onBack={handleBackToHome} />
+      case 'gran-m':
+        return <MetodoGranM onBack={handleBackToHome} />
+      case 'binario':
+        return <MetodoBinario onBack={handleBackToHome} />
       case 'hungaro':
         return <MetodoHungaro onBack={handleBackToHome} />
       case 'noroeste':
         return <EsquinaNoroeste onBack={handleBackToHome} />
-      case 'modi':
-        return <MetodoModi onBack={handleBackToHome} />
       default:
         return <Home onMethodSelect={handleMethodSelect} />
     }
