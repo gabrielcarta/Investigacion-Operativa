@@ -1,26 +1,43 @@
 import { motion } from 'framer-motion'
 import { ArrowLeft } from 'lucide-react'
-import { useState, useCallback } from 'react'
-import TableGenerator from '../components/TableGenerator'
-import GranMSolver from '../components/GranMSolver'
+import { useState, useCallback, useMemo, memo, lazy, Suspense } from 'react'
 
-const MetodoGranM = ({ onBack }) => {
+// Lazy loading de componentes pesados
+const TableGenerator = lazy(() => import('../components/TableGenerator'))
+const GranMSolver = lazy(() => import('../components/GranMSolver'))
+
+const LoadingSpinner = () => (
+  <div className="flex items-center justify-center p-8">
+    <div className="animate-spin w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full"></div>
+  </div>
+)
+
+const MetodoGranM = memo(({ onBack }) => {
   const [problemData, setProblemData] = useState(null)
 
   const handleDataChange = useCallback((data) => {
     setProblemData(data)
   }, [])
+
+  const handleBackClick = useCallback(() => {
+    onBack?.()
+  }, [onBack])
+
+  const motionVariants = useMemo(() => ({
+    initial: { opacity: 0, x: 100 },
+    animate: { opacity: 1, x: 0 },
+    exit: { opacity: 0, x: -100 },
+    transition: { duration: 0.6, ease: "easeOut" }
+  }), [])
+
   return (
     <motion.div 
       className="w-full max-w-6xl mx-auto px-6 py-8 min-h-screen flex flex-col"
-      initial={{ opacity: 0, x: 100 }}
-      animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, x: -100 }}
-      transition={{ duration: 0.6, ease: "easeOut" }}
+      {...motionVariants}
     >
       {/* Botón de regreso */}
       <motion.button
-        onClick={onBack}
+        onClick={handleBackClick}
         className="mb-6 self-start flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-500/20 to-purple-500/20 hover:from-blue-500/30 hover:to-purple-500/30 backdrop-blur-sm rounded-xl border border-white/20 text-white transition-all duration-300 group shadow-lg"
         whileHover={{ scale: 1.05, y: -2 }}
         whileTap={{ scale: 0.95 }}
@@ -79,7 +96,7 @@ const MetodoGranM = ({ onBack }) => {
           </div>
         </motion.div>
 
-        {/* Generador de problemas */}
+        {/* Generador de problemas con lazy loading */}
         <motion.div 
           className="bg-white/5 backdrop-blur-sm rounded-2xl p-8 border border-white/10 mb-8"
           initial={{ opacity: 0, y: 50 }}
@@ -87,16 +104,22 @@ const MetodoGranM = ({ onBack }) => {
           transition={{ duration: 0.6, delay: 0.6 }}
         >
           <h3 className="text-2xl font-bold text-white mb-6">🔧 Configurar Problema</h3>
-          <TableGenerator onDataChange={handleDataChange} />
+          <Suspense fallback={<LoadingSpinner />}>
+            <TableGenerator onDataChange={handleDataChange} />
+          </Suspense>
         </motion.div>
 
-        {/* Solver del método Gran M */}
+        {/* Solver del método Gran M con lazy loading */}
         {problemData && (
-          <GranMSolver problemData={problemData} />
+          <Suspense fallback={<LoadingSpinner />}>
+            <GranMSolver problemData={problemData} />
+          </Suspense>
         )}
       </div>
     </motion.div>
   )
-}
+})
+
+MetodoGranM.displayName = 'MetodoGranM'
 
 export default MetodoGranM

@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, useMemo, memo } from 'react'
 import { motion } from 'framer-motion'
 
-const TableGenerator = ({ onDataChange }) => {
+const TableGenerator = memo(({ onDataChange }) => {
   const [numVariables, setNumVariables] = useState(2)
   const [numRestricciones, setNumRestricciones] = useState(2)
   const [tipoZ, setTipoZ] = useState('max')
@@ -29,8 +29,8 @@ const TableGenerator = ({ onDataChange }) => {
     setZCoeffs(newZCoeffs)
   }, [numVariables, numRestricciones])
 
-  // Notificar cambios al componente padre
-  useEffect(() => {
+  // Notificar cambios al componente padre usando useCallback para optimización
+  const notifyDataChange = useCallback(() => {
     const data = {
       numVariables,
       numRestricciones,
@@ -38,47 +38,66 @@ const TableGenerator = ({ onDataChange }) => {
       zCoeffs,
       restricciones
     }
-    onDataChange && onDataChange(data)
-  }, [numVariables, numRestricciones, tipoZ, zCoeffs, restricciones])
+    onDataChange?.(data)
+  }, [numVariables, numRestricciones, tipoZ, zCoeffs, restricciones, onDataChange])
 
-  const updateZCoeff = (index, value) => {
-    const newZCoeffs = [...zCoeffs]
-    newZCoeffs[index] = parseFloat(value) || 0
-    setZCoeffs(newZCoeffs)
-  }
+  useEffect(() => {
+    notifyDataChange()
+  }, [notifyDataChange])
 
-  const updateRestriccion = (rowIndex, field, value) => {
-    const newRestricciones = [...restricciones]
-    if (field === 'relacion' || field === 'resultado') {
-      newRestricciones[rowIndex][field] = field === 'resultado' ? (parseFloat(value) || 0) : value
-    } else {
-      // field es el índice del coeficiente
-      newRestricciones[rowIndex].coeficientes[field] = parseFloat(value) || 0
-    }
-    setRestricciones(newRestricciones)
-  }
+  const updateZCoeff = useCallback((index, value) => {
+    setZCoeffs(prev => {
+      const newZCoeffs = [...prev]
+      newZCoeffs[index] = parseFloat(value) || 0
+      return newZCoeffs
+    })
+  }, [])
 
-  const generateZEquation = () => {
+  const updateRestriccion = useCallback((rowIndex, field, value) => {
+    setRestricciones(prev => {
+      const newRestricciones = [...prev]
+      if (field === 'relacion' || field === 'resultado') {
+        newRestricciones[rowIndex] = {
+          ...newRestricciones[rowIndex],
+          [field]: field === 'resultado' ? (parseFloat(value) || 0) : value
+        }
+      } else {
+        // field es el índice del coeficiente
+        const newCoeficientes = [...newRestricciones[rowIndex].coeficientes]
+        newCoeficientes[field] = parseFloat(value) || 0
+        newRestricciones[rowIndex] = {
+          ...newRestricciones[rowIndex],
+          coeficientes: newCoeficientes
+        }
+      }
+      return newRestricciones
+    })
+  }, [])
+
+  const generateZEquation = useMemo(() => {
     let equation = ''
     zCoeffs.forEach((coef, i) => {
       if (coef !== 0) {
         const sign = coef > 0 ? (equation === '' ? '' : '+') : '-'
         const coefAbs = Math.abs(coef)
         const coefDisplay = coefAbs === 1 ? '' : coefAbs
-        equation += `${sign}${coefDisplay}X₁${i + 1}`
+        // CORREGIDO: Usar X con subscript numérico correcto
+        equation += `${sign}${coefDisplay}X₁`
       }
     })
     return equation === '' ? '0' : equation.startsWith('+') ? equation.substring(1) : equation
-  }
+  }, [zCoeffs])
 
-  const generateRestriccionEquation = (restriccion, index) => {
+  const generateRestriccionEquation = useCallback((restriccion, index) => {
     let equation = ''
     restriccion.coeficientes.forEach((coef, i) => {
       if (coef !== 0) {
         const sign = coef > 0 ? (equation === '' ? '' : '+') : '-'
         const coefAbs = Math.abs(coef)
         const coefDisplay = coefAbs === 1 ? '' : coefAbs
-        equation += `${sign}${coefDisplay}X₁${i + 1}`
+        // CORREGIDO: Usar X con subscript numérico correcto
+        const subscripts = ['₁', '₂', '₃', '₄', '₅', '₆', '₇', '₈', '₉', '₁₀']
+        equation += `${sign}${coefDisplay}X${subscripts[i] || `₁${i + 1}`}`
       }
     })
     if (equation === '') equation = '0'
@@ -86,14 +105,32 @@ const TableGenerator = ({ onDataChange }) => {
     
     const relSymbol = restriccion.relacion === '<=' ? '≤' : restriccion.relacion === '>=' ? '≥' : '='
     return `${equation} ${relSymbol} ${restriccion.resultado}`
-  }
+  }, [])
+
+  // Memoizar variantes de animación
+  const motionVariants = useMemo(() => ({
+    initial: { opacity: 0, y: 50 },
+    animate: { opacity: 1, y: 0 },
+    transition: { duration: 0.6, delay: 0.2 }
+  }), [])
+
+  // Memoizar handlers para evitar re-renders
+  const handleVariablesChange = useCallback((e) => {
+    setNumVariables(Math.max(1, parseInt(e.target.value) || 1))
+  }, [])
+
+  const handleRestriccionesChange = useCallback((e) => {
+    setNumRestricciones(Math.max(1, parseInt(e.target.value) || 1))
+  }, [])
+
+  const handleTipoZChange = useCallback((e) => {
+    setTipoZ(e.target.value)
+  }, [])
 
   return (
     <motion.div 
       className="bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/10 mb-8"
-      initial={{ opacity: 0, y: 50 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.6, delay: 0.2 }}
+      {...motionVariants}
     >
       <h3 className="text-2xl font-bold text-white mb-6">⚙️ Configuración del Problema</h3>
       
@@ -104,7 +141,7 @@ const TableGenerator = ({ onDataChange }) => {
           <input
             type="number"
             value={numVariables}
-            onChange={(e) => setNumVariables(Math.max(1, parseInt(e.target.value) || 1))}
+            onChange={handleVariablesChange}
             className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white focus:border-blue-400 focus:outline-none"
             min="1"
             max="10"
@@ -115,7 +152,7 @@ const TableGenerator = ({ onDataChange }) => {
           <input
             type="number"
             value={numRestricciones}
-            onChange={(e) => setNumRestricciones(Math.max(1, parseInt(e.target.value) || 1))}
+            onChange={handleRestriccionesChange}
             className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white focus:border-blue-400 focus:outline-none"
             min="1"
             max="10"
@@ -132,7 +169,7 @@ const TableGenerator = ({ onDataChange }) => {
               type="radio"
               value="max"
               checked={tipoZ === 'max'}
-              onChange={(e) => setTipoZ(e.target.value)}
+              onChange={handleTipoZChange}
               className="mr-2"
             />
             <span className="text-white">Maximizar</span>
@@ -142,7 +179,7 @@ const TableGenerator = ({ onDataChange }) => {
               type="radio"
               value="min"
               checked={tipoZ === 'min'}
-              onChange={(e) => setTipoZ(e.target.value)}
+              onChange={handleTipoZChange}
               className="mr-2"
             />
             <span className="text-white">Minimizar</span>
@@ -158,7 +195,11 @@ const TableGenerator = ({ onDataChange }) => {
               <th className="border border-white/20 px-3 py-3 text-white text-sm w-24"></th>
               {Array.from({ length: numVariables }, (_, i) => (
                 <th key={i} className="border border-white/20 px-3 py-3 text-white text-sm w-20">
-                  X₁{i + 1}
+                  {/* CORREGIDO: Usar subscript correcto */}
+                  {(() => {
+                    const subscripts = ['₁', '₂', '₃', '₄', '₅', '₆', '₇', '₈', '₉', '₁₀']
+                    return `X${subscripts[i] || `₁${i + 1}`}`
+                  })()}
                 </th>
               ))}
               <th className="border border-white/20 px-3 py-3 text-white text-sm w-24">Relación</th>
@@ -185,7 +226,7 @@ const TableGenerator = ({ onDataChange }) => {
               ))}
               <td colSpan="2" className="border border-white/20 px-3 py-3"></td>
               <td className="border border-white/20 px-3 py-3 text-white text-sm overflow-hidden">
-                <div className="truncate">Z = {generateZEquation()}</div>
+                <div className="truncate">Z = {generateZEquation}</div>
               </td>
             </tr>
 
@@ -236,6 +277,8 @@ const TableGenerator = ({ onDataChange }) => {
       </div>
     </motion.div>
   )
-}
+})
+
+TableGenerator.displayName = 'TableGenerator'
 
 export default TableGenerator

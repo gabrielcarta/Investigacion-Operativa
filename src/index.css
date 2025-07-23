@@ -24,3 +24,24 @@ html, body {
 * {
   box-sizing: border-box;
 }
+
+/* Optimizaciones de rendimiento para scroll */
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  overflow-y: scroll;
+  overscroll-behavior-y: none; /* Evita el efecto rebote en algunos navegadores */
+}
+
+/* Forzar la aceleración de GPU para animaciones */
+.gpu-accelerated {
+  transform: translateZ(0);
+  will-change: transform;
+}
+
+/* Aplicar solo cuando se está desplazando */
+.is-scrolling * {
+  pointer-events: none; /* Desactiva eventos mientras se desplaza para mejorar rendimiento */
+}

@@ -1,30 +1,43 @@
 import { motion } from 'framer-motion'
 import { ArrowLeft } from 'lucide-react'
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useMemo, memo } from 'react'
 import TableGenerator from '../components/TableGenerator'
 import SimplexSolver from '../components/SimplexSolver'
 
-const MetodoSimplex = ({ onBack }) => {
+const MetodoSimplex = memo(({ onBack }) => {
   const [problemData, setProblemData] = useState(null)
 
   const handleDataChange = useCallback((data) => {
     setProblemData(data)
   }, [])
 
+  const handleBackClick = useCallback(() => {
+    onBack?.()
+  }, [onBack])
+
+  // Memoizar las animaciones para evitar recálculos
+  const motionVariants = useMemo(() => ({
+    initial: { opacity: 0, x: 100 },
+    animate: { opacity: 1, x: 0 },
+    exit: { opacity: 0, x: -100 },
+    transition: { duration: 0.6, ease: "easeOut" }
+  }), [])
+
+  const buttonVariants = useMemo(() => ({
+    whileHover: { scale: 1.05, y: -2 },
+    whileTap: { scale: 0.95 }
+  }), [])
+
   return (
     <motion.div 
       className="w-full max-w-6xl mx-auto px-6 py-8 min-h-screen flex flex-col"
-      initial={{ opacity: 0, x: 100 }}
-      animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, x: -100 }}
-      transition={{ duration: 0.6, ease: "easeOut" }}
+      {...motionVariants}
     >
-      {/* Botón de regreso - MÁS VISIBLE */}
+      {/* Botón de regreso optimizado */}
       <motion.button
-        onClick={onBack}
+        onClick={handleBackClick}
         className="mb-6 self-start flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-500/20 to-purple-500/20 hover:from-blue-500/30 hover:to-purple-500/30 backdrop-blur-sm rounded-xl border border-white/20 text-white transition-all duration-300 group shadow-lg"
-        whileHover={{ scale: 1.05, y: -2 }}
-        whileTap={{ scale: 0.95 }}
+        {...buttonVariants}
         style={{ zIndex: 50 }}
       >
         <ArrowLeft size={22} className="group-hover:-translate-x-1 transition-transform" />
@@ -88,6 +101,8 @@ const MetodoSimplex = ({ onBack }) => {
       </div>
     </motion.div>
   )
-}
+})
+
+MetodoSimplex.displayName = 'MetodoSimplex'
 
 export default MetodoSimplex

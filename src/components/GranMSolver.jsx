@@ -1,12 +1,12 @@
-import { useState } from 'react'
+import { useState, useCallback, useMemo, memo } from 'react'
 import { motion } from 'framer-motion'
 
-const GranMSolver = ({ problemData }) => {
+const GranMSolver = memo(({ problemData }) => {
   const [solution, setSolution] = useState(null)
   const [iterations, setIterations] = useState([])
   const [isCalculating, setIsCalculating] = useState(false)
 
-  const generateTableHTML = (data) => {
+  const generateTableHTML = useCallback((data) => {
     return (
       <div className="overflow-x-auto mb-6">
         <table className="w-full border border-white/20 rounded-lg overflow-hidden">
@@ -24,252 +24,277 @@ const GranMSolver = ({ problemData }) => {
         </table>
       </div>
     )
-  }
+  }, [])
 
-  const resolverGranM = () => {
+  const resolverGranM = useCallback(() => {
     if (!problemData) return
 
     setIsCalculating(true)
-    const { numVariables, numRestricciones, tipoZ, zCoeffs, restricciones } = problemData
     
-    const M = 1000000 // Valor grande para M
-    let tableau = []
-    const iteracionesTemp = []
-    
-    try {
-      // Paso 1: Determinar el número de variables de cada tipo
-      let numSlack = 0
-      let numSurplus = 0
-      let numArtificial = 0
-      
-      restricciones.forEach(rest => {
-        if (rest.relacion === '<=') {
-          numSlack++
-        } else if (rest.relacion === '>=') {
-          numSurplus++
-          numArtificial++
-        } else if (rest.relacion === '=') {
-          numArtificial++
-        }
-      })
-
-      // Paso 2: Crear el tableau inicial
-      const numCols = 1 + numVariables + numSlack + numSurplus + numArtificial + 1
-      
-      // Header
-      const header = ['Base']
-      for (let i = 0; i < numVariables; i++) header.push(`x${i + 1}`)
-      for (let i = 0; i < numSlack; i++) header.push(`s${i + 1}`)
-      for (let i = 0; i < numSurplus; i++) header.push(`e${i + 1}`)
-      for (let i = 0; i < numArtificial; i++) header.push(`A${i + 1}`)
-      header.push('Sol')
-      
-      tableau.push(header)
-
-      // Variables base
-      const baseVariables = []
-      let slackIdx = 0
-      let surplusIdx = 0
-      let artificialIdx = 0
-
-      // Crear filas de restricciones
-      for (let i = 0; i < numRestricciones; i++) {
-        const rest = restricciones[i]
-        const fila = new Array(numCols).fill(0)
+    // Usar setTimeout para no bloquear el UI durante cálculos pesados
+    setTimeout(() => {
+      try {
+        const { numVariables, numRestricciones, tipoZ, zCoeffs, restricciones } = problemData
         
-        // Variables originales
-        for (let j = 0; j < numVariables; j++) {
-          fila[1 + j] = rest.coeficientes[j] || 0
-        }
+        const M = 1000000
+        let tableau = []
+        const iteracionesTemp = []
         
-        if (rest.relacion === '<=') {
-          // Agregar variable de holgura
-          fila[1 + numVariables + slackIdx] = 1
-          fila[0] = `s${slackIdx + 1}`
-          baseVariables.push(`s${slackIdx + 1}`)
-          slackIdx++
-        } else if (rest.relacion === '>=') {
-          // Agregar variable de exceso y artificial
-          fila[1 + numVariables + numSlack + surplusIdx] = -1
-          fila[1 + numVariables + numSlack + numSurplus + artificialIdx] = 1
-          fila[0] = `A${artificialIdx + 1}`
-          baseVariables.push(`A${artificialIdx + 1}`)
-          surplusIdx++
-          artificialIdx++
-        } else if (rest.relacion === '=') {
-          // Agregar solo variable artificial
-          fila[1 + numVariables + numSlack + numSurplus + artificialIdx] = 1
-          fila[0] = `A${artificialIdx + 1}`
-          baseVariables.push(`A${artificialIdx + 1}`)
-          artificialIdx++
-        }
+        // Paso 1: Determinar el número de variables de cada tipo
+        let numSlack = 0
+        let numSurplus = 0
+        let numArtificial = 0
         
-        // RHS
-        fila[fila.length - 1] = rest.resultado || 0
-        tableau.push(fila)
-      }
-
-      // Paso 3: Crear fila Z
-      const zRow = new Array(numCols).fill(0)
-      zRow[0] = 'Z'
-      
-      // Coeficientes originales
-      for (let i = 0; i < numVariables; i++) {
-        zRow[1 + i] = (tipoZ === 'max' ? -(zCoeffs[i] || 0) : (zCoeffs[i] || 0))
-      }
-      
-      // Penalizar variables artificiales
-      for (let i = 0; i < numArtificial; i++) {
-        const colIdx = 1 + numVariables + numSlack + numSurplus + i
-        zRow[colIdx] = (tipoZ === 'max' ? -M : M)
-      }
-      
-      // Ajustar por variables artificiales en la base
-      for (let i = 0; i < baseVariables.length; i++) {
-        if (baseVariables[i].startsWith('A')) {
-          const artificialNum = parseInt(baseVariables[i].substring(1)) - 1
-          const multiplier = (tipoZ === 'max' ? M : -M)
-          
-          // Restar M veces la fila de la restricción de la fila Z
-          for (let j = 1; j < tableau[i + 1].length - 1; j++) {
-            zRow[j] -= multiplier * tableau[i + 1][j]
+        restricciones.forEach(rest => {
+          if (rest.relacion === '<=') {
+            numSlack++
+          } else if (rest.relacion === '>=') {
+            numSurplus++
+            numArtificial++
+          } else if (rest.relacion === '=') {
+            numArtificial++
           }
-          zRow[zRow.length - 1] -= multiplier * tableau[i + 1][tableau[i + 1].length - 1]
+        })
+
+        // Paso 2: Crear el tableau inicial
+        const numCols = 1 + numVariables + numSlack + numSurplus + numArtificial + 1
+        
+        // Header
+        const header = ['Base']
+        for (let i = 0; i < numVariables; i++) header.push(`x${i + 1}`)
+        for (let i = 0; i < numSlack; i++) header.push(`s${i + 1}`)
+        for (let i = 0; i < numSurplus; i++) header.push(`e${i + 1}`)
+        for (let i = 0; i < numArtificial; i++) header.push(`A${i + 1}`)
+        header.push('Sol')
+        
+        tableau.push(header)
+
+        // Variables base
+        const baseVariables = []
+        let slackIdx = 0
+        let surplusIdx = 0
+        let artificialIdx = 0
+
+        // Crear filas de restricciones
+        for (let i = 0; i < numRestricciones; i++) {
+          const rest = restricciones[i]
+          const fila = new Array(numCols).fill(0)
+          
+          // Variables originales
+          for (let j = 0; j < numVariables; j++) {
+            fila[1 + j] = rest.coeficientes[j] || 0
+          }
+          
+          if (rest.relacion === '<=') {
+            // Agregar variable de holgura
+            fila[1 + numVariables + slackIdx] = 1
+            fila[0] = `s${slackIdx + 1}`
+            baseVariables.push(`s${slackIdx + 1}`)
+            slackIdx++
+          } else if (rest.relacion === '>=') {
+            // Agregar variable de exceso y artificial
+            fila[1 + numVariables + numSlack + surplusIdx] = -1
+            fila[1 + numVariables + numSlack + numSurplus + artificialIdx] = 1
+            fila[0] = `A${artificialIdx + 1}`
+            baseVariables.push(`A${artificialIdx + 1}`)
+            surplusIdx++
+            artificialIdx++
+          } else if (rest.relacion === '=') {
+            // Agregar solo variable artificial
+            fila[1 + numVariables + numSlack + numSurplus + artificialIdx] = 1
+            fila[0] = `A${artificialIdx + 1}`
+            baseVariables.push(`A${artificialIdx + 1}`)
+            artificialIdx++
+          }
+          
+          // RHS
+          fila[fila.length - 1] = rest.resultado || 0
+          tableau.push(fila)
         }
-      }
-      
-      tableau.push(zRow)
 
-      let iteration = 0
-      iteracionesTemp.push({
-        numero: iteration,
-        tableau: tableau.map(row => [...row]),
-        baseVariables: [...baseVariables]
-      })
-
-      // Algoritmo Simplex
-      while (iteration < 20) {
-        iteration++
+        // Paso 3: Crear fila Z
+        const zRow = new Array(numCols).fill(0)
+        zRow[0] = 'Z'
         
-        // Encontrar columna pivote (más negativo en fila Z)
-        const zData = tableau[tableau.length - 1]
-        let pivotCol = -1
-        let mostNegative = 0
+        // Coeficientes originales
+        for (let i = 0; i < numVariables; i++) {
+          zRow[1 + i] = (tipoZ === 'max' ? -(zCoeffs[i] || 0) : (zCoeffs[i] || 0))
+        }
         
-        for (let i = 1; i < zData.length - 1; i++) {
-          if (zData[i] < mostNegative) {
-            mostNegative = zData[i]
-            pivotCol = i
+        // Penalizar variables artificiales
+        for (let i = 0; i < numArtificial; i++) {
+          const colIdx = 1 + numVariables + numSlack + numSurplus + i
+          zRow[colIdx] = (tipoZ === 'max' ? -M : M)
+        }
+        
+        // Ajustar por variables artificiales en la base
+        for (let i = 0; i < baseVariables.length; i++) {
+          if (baseVariables[i].startsWith('A')) {
+            const artificialNum = parseInt(baseVariables[i].substring(1)) - 1
+            const multiplier = (tipoZ === 'max' ? M : -M)
+            
+            // Restar M veces la fila de la restricción de la fila Z
+            for (let j = 1; j < tableau[i + 1].length - 1; j++) {
+              zRow[j] -= multiplier * tableau[i + 1][j]
+            }
+            zRow[zRow.length - 1] -= multiplier * tableau[i + 1][tableau[i + 1].length - 1]
           }
         }
-
-        // Condición de parada
-        if (pivotCol === -1 || mostNegative >= -0.0001) break
-
-        // Encontrar fila pivote
-        let pivotRow = -1
-        let minRatio = Infinity
         
-        for (let i = 1; i < tableau.length - 1; i++) {
-          const pivotVal = tableau[i][pivotCol]
-          const rhs = tableau[i][tableau[i].length - 1]
+        tableau.push(zRow)
+
+        let iteration = 0
+        iteracionesTemp.push({
+          numero: iteration,
+          tableau: tableau.map(row => [...row]),
+          baseVariables: [...baseVariables]
+        })
+
+        // Algoritmo Simplex
+        while (iteration < 20) {
+          iteration++
           
-          if (pivotVal > 0.0001) {
-            const ratio = rhs / pivotVal
-            if (ratio >= 0 && ratio < minRatio) {
-              minRatio = ratio
-              pivotRow = i
+          // Encontrar columna pivote (más negativo en fila Z)
+          const zData = tableau[tableau.length - 1]
+          let pivotCol = -1
+          let mostNegative = 0
+          
+          for (let i = 1; i < zData.length - 1; i++) {
+            if (zData[i] < mostNegative) {
+              mostNegative = zData[i]
+              pivotCol = i
+            }
+          }
+
+          // Condición de parada
+          if (pivotCol === -1 || mostNegative >= -0.0001) break
+
+          // Encontrar fila pivote
+          let pivotRow = -1
+          let minRatio = Infinity
+          
+          for (let i = 1; i < tableau.length - 1; i++) {
+            const pivotVal = tableau[i][pivotCol]
+            const rhs = tableau[i][tableau[i].length - 1]
+            
+            if (pivotVal > 0.0001) {
+              const ratio = rhs / pivotVal
+              if (ratio >= 0 && ratio < minRatio) {
+                minRatio = ratio
+                pivotRow = i
+              }
+            }
+          }
+
+          if (pivotRow === -1) break // No hay solución acotada
+
+          // Pivoteo
+          const pivotElement = tableau[pivotRow][pivotCol]
+          
+          // Normalizar fila pivote
+          for (let j = 1; j < tableau[pivotRow].length; j++) {
+            tableau[pivotRow][j] /= pivotElement
+          }
+          
+          // Actualizar variable base
+          baseVariables[pivotRow - 1] = header[pivotCol]
+          tableau[pivotRow][0] = header[pivotCol]
+
+          // Eliminar en otras filas
+          for (let i = 1; i < tableau.length; i++) {
+            if (i === pivotRow) continue
+            
+            const factor = tableau[i][pivotCol]
+            for (let j = 1; j < tableau[i].length; j++) {
+              tableau[i][j] -= factor * tableau[pivotRow][j]
+            }
+          }
+
+          iteracionesTemp.push({
+            numero: iteration,
+            tableau: tableau.map(row => [...row]),
+            baseVariables: [...baseVariables],
+            pivotRow: pivotRow - 1,
+            pivotCol: pivotCol - 1
+          })
+        }
+
+        // Analizar solución
+        const finalSolution = {}
+        const zValue = tableau[tableau.length - 1][tableau[tableau.length - 1].length - 1]
+        
+        // Verificar variables artificiales
+        let hasArtificialVars = false
+        const artificialVarsInfo = []
+        
+        for (let i = 0; i < baseVariables.length; i++) {
+          if (baseVariables[i].startsWith('A')) {
+            const value = tableau[i + 1][tableau[i + 1].length - 1]
+            artificialVarsInfo.push(`${baseVariables[i]} = ${value.toFixed(6)}`)
+            if (Math.abs(value) > 0.0001) {
+              hasArtificialVars = true
             }
           }
         }
 
-        if (pivotRow === -1) break // No hay solución acotada
-
-        // Pivoteo
-        const pivotElement = tableau[pivotRow][pivotCol]
-        
-        // Normalizar fila pivote
-        for (let j = 1; j < tableau[pivotRow].length; j++) {
-          tableau[pivotRow][j] /= pivotElement
-        }
-        
-        // Actualizar variable base
-        baseVariables[pivotRow - 1] = header[pivotCol]
-        tableau[pivotRow][0] = header[pivotCol]
-
-        // Eliminar en otras filas
-        for (let i = 1; i < tableau.length; i++) {
-          if (i === pivotRow) continue
+        if (hasArtificialVars) {
+          finalSolution.status = 'No tiene solución factible'
+          finalSolution.message = 'Las variables artificiales no se pudieron eliminar de la base'
+          finalSolution.debugInfo = `Variables artificiales: ${artificialVarsInfo.join(', ')}`
+        } else {
+          finalSolution.status = 'Solución óptima encontrada'
+          finalSolution.variables = {}
           
-          const factor = tableau[i][pivotCol]
-          for (let j = 1; j < tableau[i].length; j++) {
-            tableau[i][j] -= factor * tableau[pivotRow][j]
+          // Inicializar variables
+          for (let i = 0; i < numVariables; i++) {
+            finalSolution.variables[`x${i + 1}`] = 0
           }
+          
+          // Asignar valores de la base
+          for (let i = 0; i < baseVariables.length; i++) {
+            const varName = baseVariables[i]
+            if (varName.startsWith('x')) {
+              finalSolution.variables[varName] = tableau[i + 1][tableau[i + 1].length - 1]
+            }
+          }
+          
+          finalSolution.valorZ = tipoZ === 'max' ? -zValue : zValue
         }
 
-        iteracionesTemp.push({
-          numero: iteration,
-          tableau: tableau.map(row => [...row]),
-          baseVariables: [...baseVariables],
-          pivotRow: pivotRow - 1,
-          pivotCol: pivotCol - 1
+        setIterations(iteracionesTemp)
+        setSolution(finalSolution)
+        
+      } catch (error) {
+        console.error('Error en GranMSolver:', error)
+        setSolution({
+          status: 'Error en el cálculo',
+          message: `Error: ${error.message}`
         })
+      } finally {
+        setIsCalculating(false)
       }
+    }, 100)
+  }, [problemData])
 
-      // Analizar solución
-      const finalSolution = {}
-      const zValue = tableau[tableau.length - 1][tableau[tableau.length - 1].length - 1]
-      
-      // Verificar variables artificiales
-      let hasArtificialVars = false
-      const artificialVarsInfo = []
-      
-      for (let i = 0; i < baseVariables.length; i++) {
-        if (baseVariables[i].startsWith('A')) {
-          const value = tableau[i + 1][tableau[i + 1].length - 1]
-          artificialVarsInfo.push(`${baseVariables[i]} = ${value.toFixed(6)}`)
-          if (Math.abs(value) > 0.0001) {
-            hasArtificialVars = true
-          }
-        }
-      }
-
-      if (hasArtificialVars) {
-        finalSolution.status = 'No tiene solución factible'
-        finalSolution.message = 'Las variables artificiales no se pudieron eliminar de la base'
-        finalSolution.debugInfo = `Variables artificiales: ${artificialVarsInfo.join(', ')}`
-      } else {
-        finalSolution.status = 'Solución óptima encontrada'
-        finalSolution.variables = {}
-        
-        // Inicializar variables
-        for (let i = 0; i < numVariables; i++) {
-          finalSolution.variables[`x${i + 1}`] = 0
-        }
-        
-        // Asignar valores de la base
-        for (let i = 0; i < baseVariables.length; i++) {
-          const varName = baseVariables[i]
-          if (varName.startsWith('x')) {
-            finalSolution.variables[varName] = tableau[i + 1][tableau[i + 1].length - 1]
-          }
-        }
-        
-        finalSolution.valorZ = tipoZ === 'max' ? -zValue : zValue
-      }
-
-      setIterations(iteracionesTemp)
-      setSolution(finalSolution)
-      
-    } catch (error) {
-      setSolution({
-        status: 'Error en el cálculo',
-        message: `Error: ${error.message}`
-      })
-    }
+  // Memoizar la información del problema
+  const problemFormulation = useMemo(() => {
+    if (!problemData) return null
     
-    setIsCalculating(false)
-  }
+    return {
+      type: problemData.tipoZ === 'max' ? 'Maximizar' : 'Minimizar',
+      objective: problemData.zCoeffs.map((coef, i) => 
+        `${i > 0 ? (coef >= 0 ? ' + ' : ' - ') : ''}${Math.abs(coef)}x${i + 1}`
+      ).join(''),
+      constraints: problemData.restricciones.map((rest, i) => ({
+        id: i,
+        expression: rest.coeficientes.map((coef, j) => 
+          `${j > 0 ? (coef >= 0 ? ' + ' : ' - ') : ''}${Math.abs(coef)}x${j + 1}`
+        ).join(''),
+        relation: rest.relacion,
+        value: rest.resultado
+      }))
+    }
+  }, [problemData])
 
   return (
     <motion.div 
@@ -278,7 +303,7 @@ const GranMSolver = ({ problemData }) => {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.6, delay: 0.8 }}
     >
-      {problemData && (
+      {problemFormulation && (
         <motion.div 
           className="bg-gradient-to-br from-orange-500/10 to-red-500/10 rounded-2xl p-6 border border-orange-500/20"
           initial={{ opacity: 0, scale: 0.95 }}
@@ -290,18 +315,13 @@ const GranMSolver = ({ problemData }) => {
           <div className="mb-4 p-4 bg-black/20 rounded-lg">
             <h4 className="text-orange-400 font-semibold mb-2">Problema formulado:</h4>
             <p className="text-white">
-              {problemData.tipoZ === 'max' ? 'Maximizar' : 'Minimizar'}: Z = {' '}
-              {problemData.zCoeffs.map((coef, i) => 
-                `${i > 0 ? (coef >= 0 ? ' + ' : ' - ') : ''}${Math.abs(coef)}x${i + 1}`
-              ).join('')}
+              {problemFormulation.type}: Z = {problemFormulation.objective}
             </p>
             <div className="mt-2">
               <span className="text-gray-300">Sujeto a:</span>
-              {problemData.restricciones.map((rest, i) => (
-                <div key={i} className="ml-4 text-white">
-                  {rest.coeficientes.map((coef, j) => 
-                    `${j > 0 ? (coef >= 0 ? ' + ' : ' - ') : ''}${Math.abs(coef)}x${j + 1}`
-                  ).join('')} {rest.relacion} {rest.resultado}
+              {problemFormulation.constraints.map((constraint) => (
+                <div key={constraint.id} className="ml-4 text-white">
+                  {constraint.expression} {constraint.relation} {constraint.value}
                 </div>
               ))}
             </div>
@@ -311,8 +331,8 @@ const GranMSolver = ({ problemData }) => {
             onClick={resolverGranM}
             disabled={isCalculating}
             className="w-full bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 disabled:from-gray-500 disabled:to-gray-600 text-white font-bold py-3 px-6 rounded-lg transition-all duration-300 shadow-lg"
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
+            whileHover={!isCalculating ? { scale: 1.02 } : {}}
+            whileTap={!isCalculating ? { scale: 0.98 } : {}}
           >
             {isCalculating ? '🔄 Calculando...' : '🚀 Resolver con Gran M'}
           </motion.button>
@@ -412,6 +432,8 @@ const GranMSolver = ({ problemData }) => {
       )}
     </motion.div>
   )
-}
+})
+
+GranMSolver.displayName = 'GranMSolver'
 
 export default GranMSolver

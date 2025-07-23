@@ -1,13 +1,18 @@
-import { StrictMode } from 'react'
-import { createRoot } from 'react-dom/client'
-import { BrowserRouter } from 'react-router-dom'
-import './index.css'
+import React from 'react'
+import ReactDOM from 'react-dom/client'
 import App from './App.jsx'
+import './index.css'
 
-createRoot(document.getElementById('root')).render(
-  <StrictMode>
-    <BrowserRouter>
+// Configuración para optimizar renderizado de React
+const root = ReactDOM.createRoot(document.getElementById('root'))
+root.render(
+  // Eliminar StrictMode en producción mejora el rendimiento
+  // ya que evita el doble renderizado
+  process.env.NODE_ENV === 'production' ? (
+    <App />
+  ) : (
+    <React.StrictMode>
       <App />
-    </BrowserRouter>
-  </StrictMode>,
+    </React.StrictMode>
+  ),
 )

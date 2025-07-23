@@ -1,12 +1,12 @@
-import { useState } from 'react'
+import { useState, useCallback, useMemo, memo } from 'react'
 import { motion } from 'framer-motion'
 
-const SimplexSolver = ({ problemData }) => {
+const SimplexSolver = memo(({ problemData }) => {
   const [solution, setSolution] = useState(null)
   const [iterations, setIterations] = useState([])
   const [isCalculating, setIsCalculating] = useState(false)
 
-  const generateTableHTML = (data) => {
+  const generateTableHTML = useCallback((data) => {
     return (
       <div className="overflow-x-auto mb-6">
         <table className="w-full border border-white/20 rounded-lg overflow-hidden">
@@ -24,139 +24,160 @@ const SimplexSolver = ({ problemData }) => {
         </table>
       </div>
     )
-  }
+  }, [])
 
-  const resolverSimplex = () => {
+  // Memoizar el algoritmo pesado
+  const resolverSimplex = useCallback(() => {
     if (!problemData) return
 
     setIsCalculating(true)
-    const { numVariables, numRestricciones, tipoZ, zCoeffs, restricciones } = problemData
-
-    // Construir tableau inicial
-    const tableau = []
-    const iteracionesTemp = []
-
-    // Header
-    const header = ['Base']
-    for (let i = 0; i < numVariables; i++) header.push(`x${i + 1}`)
-    for (let i = 0; i < numRestricciones; i++) header.push(`s${i + 1}`)
-    header.push('Sol')
-    tableau.push(header)
-
-    // Restricciones con variables de holgura
-    for (let i = 0; i < numRestricciones; i++) {
-      const fila = [`s${i + 1}`]
-      // Coeficientes de variables
-      for (let j = 0; j < numVariables; j++) {
-        fila.push(restricciones[i].coeficientes[j] || 0)
-      }
-      // Variables de holgura
-      for (let j = 0; j < numRestricciones; j++) {
-        fila.push(i === j ? 1 : 0)
-      }
-      // Lado derecho
-      fila.push(restricciones[i].resultado || 0)
-      tableau.push(fila)
-    }
-
-    // Fila Z
-    const zRow = ['Z']
-    for (let i = 0; i < numVariables; i++) {
-      const coef = zCoeffs[i] || 0
-      zRow.push(tipoZ === 'min' ? coef : -coef)
-    }
-    for (let i = 0; i < numRestricciones; i++) zRow.push(0)
-    zRow.push(0)
-    tableau.push(zRow)
-
-    let iteration = 0
-    iteracionesTemp.push({
-      numero: iteration,
-      tableau: tableau.map(row => [...row])
-    })
-
-    // Algoritmo Simplex
-    while (true) {
-      iteration++
-      
-      // Encontrar columna pivote (más negativo en fila Z)
-      const zData = tableau[tableau.length - 1].slice(1, -1)
-      const pivotCol = zData.reduce((minIdx, val, idx) => val < zData[minIdx] ? idx : minIdx, 0)
-
-      // Condición de parada: todos los valores en fila Z son >= 0
-      if (zData[pivotCol] >= 0) break
-
-      // Encontrar fila pivote (menor ratio positivo)
-      let pivotRow = -1
-      let minRatio = Infinity
-      for (let i = 1; i < tableau.length - 1; i++) {
-        const row = tableau[i]
-        const rhs = row[row.length - 1]
-        const pivotVal = row[pivotCol + 1]
-        if (pivotVal > 0) {
-          const ratio = rhs / pivotVal
-          if (ratio < minRatio) {
-            minRatio = ratio
-            pivotRow = i
-          }
-        }
-      }
-
-      // Verificar si hay solución ilimitada
-      if (pivotRow === -1) {
-        setSolution({ tipo: 'ilimitada' })
-        setIterations(iteracionesTemp)
-        setIsCalculating(false)
-        return
-      }
-
-      // Normalizar fila pivote
-      const pivotElement = tableau[pivotRow][pivotCol + 1]
-      for (let j = 1; j < tableau[0].length; j++) {
-        tableau[pivotRow][j] /= pivotElement
-      }
-
-      // Hacer ceros en la columna pivote
-      for (let i = 1; i < tableau.length; i++) {
-        if (i === pivotRow) continue
-        const factor = tableau[i][pivotCol + 1]
-        for (let j = 1; j < tableau[0].length; j++) {
-          tableau[i][j] -= factor * tableau[pivotRow][j]
-        }
-      }
-
-      // Actualizar variable básica
-      tableau[pivotRow][0] = tableau[0][pivotCol + 1]
-
-      // Guardar iteración
-      iteracionesTemp.push({
-        numero: iteration,
-        tableau: tableau.map(row => [...row]),
-        pivotRow: pivotRow,
-        pivotCol: pivotCol + 1
-      })
-    }
-
-    // Extraer solución final
-    const valorZ = tableau[tableau.length - 1][tableau[0].length - 1]
-    const variables = {}
     
-    // Encontrar valores de variables básicas
-    for (let i = 1; i < tableau.length - 1; i++) {
-      const baseVar = tableau[i][0]
-      const valor = tableau[i][tableau[0].length - 1]
-      variables[baseVar] = valor
-    }
+    // Usar setTimeout para no bloquear el UI
+    setTimeout(() => {
+      try {
+        const { numVariables, numRestricciones, tipoZ, zCoeffs, restricciones } = problemData
 
-    setSolution({
-      tipo: 'optima',
-      valorZ: valorZ,
-      variables: variables,
-      iteraciones: iteration
-    })
-    setIterations(iteracionesTemp)
-    setIsCalculating(false)
-  }
+        // Construir tableau inicial
+        const tableau = []
+        const iteracionesTemp = []
+
+        // Header
+        const header = ['Base']
+        for (let i = 0; i < numVariables; i++) header.push(`x${i + 1}`)
+        for (let i = 0; i < numRestricciones; i++) header.push(`s${i + 1}`)
+        header.push('Sol')
+        tableau.push(header)
+
+        // Restricciones con variables de holgura
+        for (let i = 0; i < numRestricciones; i++) {
+          const fila = [`s${i + 1}`]
+          // Coeficientes de variables
+          for (let j = 0; j < numVariables; j++) {
+            fila.push(restricciones[i].coeficientes[j] || 0)
+          }
+          // Variables de holgura
+          for (let j = 0; j < numRestricciones; j++) {
+            fila.push(i === j ? 1 : 0)
+          }
+          // Lado derecho
+          fila.push(restricciones[i].resultado || 0)
+          tableau.push(fila)
+        }
+
+        // Fila Z
+        const zRow = ['Z']
+        for (let i = 0; i < numVariables; i++) {
+          const coef = zCoeffs[i] || 0
+          zRow.push(tipoZ === 'min' ? coef : -coef)
+        }
+        for (let i = 0; i < numRestricciones; i++) zRow.push(0)
+        zRow.push(0)
+        tableau.push(zRow)
+
+        let iteration = 0
+        iteracionesTemp.push({
+          numero: iteration,
+          tableau: tableau.map(row => [...row])
+        })
+
+        // Algoritmo Simplex
+        while (true) {
+          iteration++
+          
+          // Encontrar columna pivote (más negativo en fila Z)
+          const zData = tableau[tableau.length - 1].slice(1, -1)
+          const pivotCol = zData.reduce((minIdx, val, idx) => val < zData[minIdx] ? idx : minIdx, 0)
+
+          // Condición de parada: todos los valores en fila Z son >= 0
+          if (zData[pivotCol] >= 0) break
+
+          // Encontrar fila pivote (menor ratio positivo)
+          let pivotRow = -1
+          let minRatio = Infinity
+          for (let i = 1; i < tableau.length - 1; i++) {
+            const row = tableau[i]
+            const rhs = row[row.length - 1]
+            const pivotVal = row[pivotCol + 1]
+            if (pivotVal > 0) {
+              const ratio = rhs / pivotVal
+              if (ratio < minRatio) {
+                minRatio = ratio
+                pivotRow = i
+              }
+            }
+          }
+
+          // Verificar si hay solución ilimitada
+          if (pivotRow === -1) {
+            setSolution({ tipo: 'ilimitada' })
+            setIterations(iteracionesTemp)
+            setIsCalculating(false)
+            return
+          }
+
+          // Normalizar fila pivote
+          const pivotElement = tableau[pivotRow][pivotCol + 1]
+          for (let j = 1; j < tableau[0].length; j++) {
+            tableau[pivotRow][j] /= pivotElement
+          }
+
+          // Hacer ceros en la columna pivote
+          for (let i = 1; i < tableau.length; i++) {
+            if (i === pivotRow) continue
+            const factor = tableau[i][pivotCol + 1]
+            for (let j = 1; j < tableau[0].length; j++) {
+              tableau[i][j] -= factor * tableau[pivotRow][j]
+            }
+          }
+
+          // Actualizar variable básica
+          tableau[pivotRow][0] = tableau[0][pivotCol + 1]
+
+          // Guardar iteración
+          iteracionesTemp.push({
+            numero: iteration,
+            tableau: tableau.map(row => [...row]),
+            pivotRow: pivotRow,
+            pivotCol: pivotCol + 1
+          })
+        }
+
+        // Extraer solución final
+        const valorZ = tableau[tableau.length - 1][tableau[0].length - 1]
+        const variables = {}
+        
+        // Encontrar valores de variables básicas
+        for (let i = 1; i < tableau.length - 1; i++) {
+          const baseVar = tableau[i][0]
+          const valor = tableau[i][tableau[0].length - 1]
+          variables[baseVar] = valor
+        }
+
+        setSolution({
+          tipo: 'optima',
+          valorZ: valorZ,
+          variables: variables,
+          iteraciones: iteration
+        })
+        setIterations(iteracionesTemp)
+      } catch (error) {
+        console.error('Error en SimplexSolver:', error)
+        setSolution({ tipo: 'error', mensaje: error.message })
+      } finally {
+        setIsCalculating(false)
+      }
+    }, 100) // Pequeño delay para permitir que el UI se actualice
+  }, [problemData])
+
+  // Memoizar información del problema
+  const problemInfo = useMemo(() => {
+    if (!problemData) return null
+    return {
+      variables: problemData.numVariables,
+      restricciones: problemData.numRestricciones,
+      tipo: problemData.tipoZ === 'max' ? 'Maximizar' : 'Minimizar'
+    }
+  }, [problemData])
 
   return (
     <motion.div 
@@ -167,15 +188,15 @@ const SimplexSolver = ({ problemData }) => {
     >
       <h3 className="text-2xl font-bold text-white mb-6">🔧 Calculadora Simplex</h3>
       
-      {problemData ? (
+      {problemInfo ? (
         <div>
           {/* Información del problema */}
           <div className="bg-white/10 rounded-lg p-6 mb-6">
             <p className="text-gray-300 text-lg mb-4">📊 Datos del problema configurados</p>
             <div className="grid grid-cols-2 gap-4 text-white">
-              <p>Variables: {problemData.numVariables}</p>
-              <p>Restricciones: {problemData.numRestricciones}</p>
-              <p>Tipo: {problemData.tipoZ === 'max' ? 'Maximizar' : 'Minimizar'}</p>
+              <p>Variables: {problemInfo.variables}</p>
+              <p>Restricciones: {problemInfo.restricciones}</p>
+              <p>Tipo: {problemInfo.tipo}</p>
             </div>
           </div>
 
@@ -184,8 +205,8 @@ const SimplexSolver = ({ problemData }) => {
             onClick={resolverSimplex}
             disabled={isCalculating}
             className="w-full mb-6 px-6 py-3 bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 text-white font-bold rounded-lg transition-all duration-300 disabled:opacity-50"
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
+            whileHover={!isCalculating ? { scale: 1.02 } : {}}
+            whileTap={!isCalculating ? { scale: 0.98 } : {}}
           >
             {isCalculating ? '🔄 Calculando...' : '🚀 Resolver con Simplex'}
           </motion.button>
@@ -247,6 +268,8 @@ const SimplexSolver = ({ problemData }) => {
       )}
     </motion.div>
   )
-}
+})
+
+SimplexSolver.displayName = 'SimplexSolver'
 
 export default SimplexSolver

@@ -1,32 +1,47 @@
 import { motion } from 'framer-motion'
 import { ArrowLeft } from 'lucide-react'
-import { useState } from 'react'
-import TableGenerator from '../components/TableGenerator'
-import GraficoSolver from '../components/GraficoSolver'
+import { useState, useCallback, useMemo, memo, lazy, Suspense } from 'react'
 
-const MetodoGrafico = ({ onBack }) => {
+const TableGenerator = lazy(() => import('../components/TableGenerator'))
+const GraficoSolver = lazy(() => import('../components/GraficoSolver'))
+
+const LoadingSpinner = () => (
+  <div className="flex items-center justify-center p-8">
+    <div className="animate-spin w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full"></div>
+  </div>
+)
+
+const MetodoGrafico = memo(({ onBack }) => {
   const [problemData, setProblemData] = useState(null)
   const [solutionData, setSolutionData] = useState(null)
 
-  const handleDataChange = (data) => {
+  const handleDataChange = useCallback((data) => {
     setProblemData(data)
-  }
+  }, [])
 
-  const handleSolutionChange = (solution) => {
+  const handleSolutionChange = useCallback((solution) => {
     setSolutionData(solution)
-  }
+  }, [])
+
+  const handleBackClick = useCallback(() => {
+    onBack?.()
+  }, [onBack])
+
+  const motionVariants = useMemo(() => ({
+    initial: { opacity: 0, x: 100 },
+    animate: { opacity: 1, x: 0 },
+    exit: { opacity: 0, x: -100 },
+    transition: { duration: 0.6, ease: "easeOut" }
+  }), [])
 
   return (
     <motion.div 
       className="w-full max-w-6xl mx-auto px-6 py-8 min-h-screen flex flex-col"
-      initial={{ opacity: 0, x: 100 }}
-      animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, x: -100 }}
-      transition={{ duration: 0.6, ease: "easeOut" }}
+      {...motionVariants}
     >
       {/* Botón de regreso - MÁS VISIBLE */}
       <motion.button
-        onClick={onBack}
+        onClick={handleBackClick}
         className="mb-6 self-start flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-500/20 to-purple-500/20 hover:from-blue-500/30 hover:to-purple-500/30 backdrop-blur-sm rounded-xl border border-white/20 text-white transition-all duration-300 group shadow-lg"
         whileHover={{ scale: 1.05, y: -2 }}
         whileTap={{ scale: 0.95 }}
@@ -86,16 +101,22 @@ const MetodoGrafico = ({ onBack }) => {
         </motion.div>
 
         {/* Componente de generación de tabla */}
-        <TableGenerator onDataChange={handleDataChange} />
+        <Suspense fallback={<LoadingSpinner />}>
+          <TableGenerator onDataChange={handleDataChange} />
+        </Suspense>
 
         {/* Componente de resolución gráfica */}
-        <GraficoSolver 
-          problemData={problemData} 
-          onSolutionChange={handleSolutionChange}
-        />
+        <Suspense fallback={<LoadingSpinner />}>
+          <GraficoSolver 
+            problemData={problemData} 
+            onSolutionChange={handleSolutionChange}
+          />
+        </Suspense>
       </div>
     </motion.div>
   )
-}
+})
+
+MetodoGrafico.displayName = 'MetodoGrafico'
 
 export default MetodoGrafico

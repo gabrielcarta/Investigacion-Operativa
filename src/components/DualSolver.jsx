@@ -1,12 +1,12 @@
-import { useState } from 'react'
+import { useState, useCallback, useMemo, memo } from 'react'
 import { motion } from 'framer-motion'
 
-const DualSolver = ({ problemData }) => {
+const DualSolver = memo(({ problemData }) => {
   const [solution, setSolution] = useState(null)
   const [iterations, setIterations] = useState([])
   const [isCalculating, setIsCalculating] = useState(false)
 
-  const generateTableHTML = (data, etiquetasBase) => {
+  const generateTableHTML = useCallback((data, etiquetasBase) => {
     return (
       <div className="overflow-x-auto mb-6">
         <table className="w-full border border-white/20 rounded-lg overflow-hidden">
@@ -15,7 +15,7 @@ const DualSolver = ({ problemData }) => {
               <th className="px-4 py-2 border border-white/10 text-center text-white">Base</th>
               {data[0] && data[0].slice(0, -1).map((_, j) => (
                 <th key={j} className="px-4 py-2 border border-white/10 text-center text-white">
-                  Y{j + 1}
+                  Y₁{j + 1}
                 </th>
               ))}
               <th className="px-4 py-2 border border-white/10 text-center text-white">Solución</th>
@@ -38,227 +38,247 @@ const DualSolver = ({ problemData }) => {
         </table>
       </div>
     )
-  }
+  }, [])
 
-  const resolverSimplexDual = () => {
+  const resolverSimplexDual = useCallback(() => {
     if (!problemData) return
 
     setIsCalculating(true)
-    const { numVariables, numRestricciones, tipoZ, zCoeffs, restricciones } = problemData
-
-    console.log('=== PROBLEMA ORIGINAL ===')
-    console.log('Tipo:', tipoZ)
-    console.log('Coeficientes Z:', zCoeffs)
-    console.log('Restricciones:', restricciones)
-
-    // Construir el problema dual
-    // Si el primal es MAX, el dual es MIN (y viceversa)
-    const tipoDual = tipoZ === 'max' ? 'min' : 'max'
     
-    // Dimensiones del dual: n variables duales, m restricciones duales
-    const nVarDuales = numRestricciones  // Una variable dual por cada restricción primal
-    const mRestDuales = numVariables     // Una restricción dual por cada variable primal
-    
-    // Construir tabla para el problema dual
-    const tabla = []
-    const etiquetasBase = []
-    const iteracionesTemp = []
+    // Usar setTimeout para no bloquear el UI durante cálculos pesados
+    setTimeout(() => {
+      try {
+        const { numVariables, numRestricciones, tipoZ, zCoeffs, restricciones } = problemData
 
-    // Inicializar tabla con ceros
-    for (let i = 0; i <= mRestDuales; i++) {
-      tabla[i] = new Array(nVarDuales + mRestDuales + 1).fill(0)
-    }
+        console.log('=== PROBLEMA ORIGINAL ===')
+        console.log('Tipo:', tipoZ)
+        console.log('Coeficientes Z:', zCoeffs)
+        console.log('Restricciones:', restricciones)
 
-    // Matriz A del dual = A^T del primal
-    for (let i = 0; i < mRestDuales; i++) { // Filas del dual (restricciones duales)
-      for (let j = 0; j < nVarDuales; j++) { // Columnas del dual (variables duales)
-        tabla[i][j] = restricciones[j].coeficientes[i] || 0
-      }
-    }
+        // Construir el problema dual
+        const tipoDual = tipoZ === 'max' ? 'min' : 'max'
+        const nVarDuales = numRestricciones
+        const mRestDuales = numVariables
+        
+        const tabla = []
+        const etiquetasBase = []
+        const iteracionesTemp = []
 
-    // Variables de holgura para el dual
-    for (let i = 0; i < mRestDuales; i++) {
-      for (let j = 0; j < mRestDuales; j++) {
-        tabla[i][nVarDuales + j] = (i === j) ? 1 : 0
-      }
-    }
-
-    // Lado derecho del dual = coeficientes de la función objetivo primal
-    for (let i = 0; i < mRestDuales; i++) {
-      tabla[i][nVarDuales + mRestDuales] = zCoeffs[i] || 0
-    }
-
-    // Función objetivo del dual = lados derechos del primal
-    // Para convertir a forma estándar (minimización), usamos coeficientes negativos
-    for (let j = 0; j < nVarDuales; j++) {
-      const coefDual = restricciones[j].resultado || 0
-      // Si el dual es minimización, ponemos negativos para usar algoritmo de maximización
-      tabla[mRestDuales][j] = tipoDual === 'min' ? -coefDual : coefDual
-    }
-
-    // Etiquetas base iniciales del dual (variables de holgura)
-    for (let i = 0; i < mRestDuales; i++) {
-      etiquetasBase[i] = `Y${nVarDuales + i + 1}`
-    }
-    etiquetasBase[mRestDuales] = 'Zj - Cj'
-
-    console.log('=== PROBLEMA DUAL CONSTRUIDO ===')
-    console.log('Tipo dual:', tipoDual)
-    console.log('Variables duales:', nVarDuales)
-    console.log('Restricciones duales:', mRestDuales)
-    console.log('Tabla inicial dual:', tabla)
-
-    // Guardar tabla inicial
-    iteracionesTemp.push({
-      numero: 0,
-      titulo: 'Tabla Dual Inicial',
-      tabla: tabla.map(row => [...row]),
-      etiquetasBase: [...etiquetasBase]
-    })
-
-    let iteracion = 1
-
-    // Algoritmo Simplex estándar (buscar máximo)
-    while (true) {
-      // Buscar columna entrante (valor más negativo en fila Z para maximización)
-      let columnaEntrante = -1
-      let valorMasNegativo = 0
-      for (let j = 0; j < nVarDuales + mRestDuales; j++) {
-        if (tabla[mRestDuales][j] < valorMasNegativo) {
-          valorMasNegativo = tabla[mRestDuales][j]
-          columnaEntrante = j
+        // Inicializar tabla con ceros
+        for (let i = 0; i <= mRestDuales; i++) {
+          tabla[i] = new Array(nVarDuales + mRestDuales + 1).fill(0)
         }
-      }
 
-      // Condición de parada: no hay valores negativos en fila Z
-      if (columnaEntrante === -1) {
-        console.log('Algoritmo dual terminado: solución óptima encontrada')
-        break
-      }
-
-      console.log(`Iteración ${iteracion}: Columna entrante Y${columnaEntrante + 1} con valor ${valorMasNegativo}`)
-
-      // Encontrar fila saliente (test de la razón)
-      let filaSalida = -1
-      let minCociente = Infinity
-      for (let i = 0; i < mRestDuales; i++) {
-        if (tabla[i][columnaEntrante] > 0) {
-          const cociente = tabla[i][nVarDuales + mRestDuales] / tabla[i][columnaEntrante]
-          if (cociente < minCociente) {
-            minCociente = cociente
-            filaSalida = i
+        // Matriz A del dual = A^T del primal
+        for (let i = 0; i < mRestDuales; i++) { // Filas del dual (restricciones duales)
+          for (let j = 0; j < nVarDuales; j++) { // Columnas del dual (variables duales)
+            tabla[i][j] = restricciones[j].coeficientes[i] || 0
           }
         }
-      }
 
-      if (filaSalida === -1) {
-        console.log('Problema dual ilimitado')
-        setSolution({ tipo: 'ilimitada' })
-        setIterations(iteracionesTemp)
-        setIsCalculating(false)
-        return
-      }
+        // Variables de holgura para el dual
+        for (let i = 0; i < mRestDuales; i++) {
+          for (let j = 0; j < mRestDuales; j++) {
+            tabla[i][nVarDuales + j] = (i === j) ? 1 : 0
+          }
+        }
 
-      console.log(`Fila saliente: ${etiquetasBase[filaSalida]} con razón ${minCociente}`)
+        // Lado derecho del dual = coeficientes de la función objetivo primal
+        for (let i = 0; i < mRestDuales; i++) {
+          tabla[i][nVarDuales + mRestDuales] = zCoeffs[i] || 0
+        }
 
-      // Actualizar etiqueta base
-      const variableSaliente = etiquetasBase[filaSalida]
-      etiquetasBase[filaSalida] = `Y${columnaEntrante + 1}`
+        // Función objetivo del dual = lados derechos del primal
+        // Para convertir a forma estándar (minimización), usamos coeficientes negativos
+        for (let j = 0; j < nVarDuales; j++) {
+          const coefDual = restricciones[j].resultado || 0
+          // Si el dual es minimización, ponemos negativos para usar algoritmo de maximización
+          tabla[mRestDuales][j] = tipoDual === 'min' ? -coefDual : coefDual
+        }
 
-      // Operaciones de pivoteo
-      const pivote = tabla[filaSalida][columnaEntrante]
-      console.log(`Elemento pivote: ${pivote}`)
+        // Etiquetas base iniciales del dual (variables de holgura)
+        for (let i = 0; i < mRestDuales; i++) {
+          etiquetasBase[i] = `Y${nVarDuales + i + 1}`
+        }
+        etiquetasBase[mRestDuales] = 'Zj - Cj'
 
-      // Normalizar fila pivote
-      for (let j = 0; j <= nVarDuales + mRestDuales; j++) {
-        tabla[filaSalida][j] /= pivote
-      }
+        console.log('=== PROBLEMA DUAL CONSTRUIDO ===')
+        console.log('Tipo dual:', tipoDual)
+        console.log('Variables duales:', nVarDuales)
+        console.log('Restricciones duales:', mRestDuales)
+        console.log('Tabla inicial dual:', tabla)
 
-      // Hacer ceros en la columna pivote
-      for (let i = 0; i <= mRestDuales; i++) {
-        if (i !== filaSalida) {
-          const factor = tabla[i][columnaEntrante]
+        // Guardar tabla inicial
+        iteracionesTemp.push({
+          numero: 0,
+          titulo: 'Tabla Dual Inicial',
+          tabla: tabla.map(row => [...row]),
+          etiquetasBase: [...etiquetasBase]
+        })
+
+        let iteracion = 1
+
+        // Algoritmo Simplex estándar (buscar máximo)
+        while (true) {
+          // Buscar columna entrante (valor más negativo en fila Z para maximización)
+          let columnaEntrante = -1
+          let valorMasNegativo = 0
+          for (let j = 0; j < nVarDuales + mRestDuales; j++) {
+            if (tabla[mRestDuales][j] < valorMasNegativo) {
+              valorMasNegativo = tabla[mRestDuales][j]
+              columnaEntrante = j
+            }
+          }
+
+          // Condición de parada: no hay valores negativos en fila Z
+          if (columnaEntrante === -1) {
+            console.log('Algoritmo dual terminado: solución óptima encontrada')
+            break
+          }
+
+          console.log(`Iteración ${iteracion}: Columna entrante Y${columnaEntrante + 1} con valor ${valorMasNegativo}`)
+
+          // Encontrar fila saliente (test de la razón)
+          let filaSalida = -1
+          let minCociente = Infinity
+          for (let i = 0; i < mRestDuales; i++) {
+            if (tabla[i][columnaEntrante] > 0) {
+              const cociente = tabla[i][nVarDuales + mRestDuales] / tabla[i][columnaEntrante]
+              if (cociente < minCociente) {
+                minCociente = cociente
+                filaSalida = i
+              }
+            }
+          }
+
+          if (filaSalida === -1) {
+            console.log('Problema dual ilimitado')
+            setSolution({ tipo: 'ilimitada' })
+            setIterations(iteracionesTemp)
+            setIsCalculating(false)
+            return
+          }
+
+          console.log(`Fila saliente: ${etiquetasBase[filaSalida]} con razón ${minCociente}`)
+
+          // Actualizar etiqueta base
+          const variableSaliente = etiquetasBase[filaSalida]
+          etiquetasBase[filaSalida] = `Y${columnaEntrante + 1}`
+
+          // Operaciones de pivoteo
+          const pivote = tabla[filaSalida][columnaEntrante]
+          console.log(`Elemento pivote: ${pivote}`)
+
+          // Normalizar fila pivote
           for (let j = 0; j <= nVarDuales + mRestDuales; j++) {
-            tabla[i][j] -= factor * tabla[filaSalida][j]
+            tabla[filaSalida][j] /= pivote
+          }
+
+          // Hacer ceros en la columna pivote
+          for (let i = 0; i <= mRestDuales; i++) {
+            if (i !== filaSalida) {
+              const factor = tabla[i][columnaEntrante]
+              for (let j = 0; j <= nVarDuales + mRestDuales; j++) {
+                tabla[i][j] -= factor * tabla[filaSalida][j]
+              }
+            }
+          }
+
+          // Guardar iteración
+          iteracionesTemp.push({
+            numero: iteracion,
+            titulo: `Iteración ${iteracion}`,
+            tabla: tabla.map(row => [...row]),
+            etiquetasBase: [...etiquetasBase],
+            variableEntrante: `Y${columnaEntrante + 1}`,
+            variableSaliente: variableSaliente
+          })
+
+          iteracion++
+
+          // Prevenir bucles infinitos
+          if (iteracion > 50) {
+            console.log('Máximo de iteraciones alcanzado')
+            break
           }
         }
-      }
 
-      // Guardar iteración
-      iteracionesTemp.push({
-        numero: iteracion,
-        titulo: `Iteración ${iteracion}`,
-        tabla: tabla.map(row => [...row]),
-        etiquetasBase: [...etiquetasBase],
-        variableEntrante: `Y${columnaEntrante + 1}`,
-        variableSaliente: variableSaliente
-      })
-
-      iteracion++
-
-      // Prevenir bucles infinitos
-      if (iteracion > 50) {
-        console.log('Máximo de iteraciones alcanzado')
-        break
-      }
-    }
-
-    // Extraer solución del problema dual
-    const solucionDual = new Array(nVarDuales + mRestDuales).fill(0)
-    
-    for (let i = 0; i < mRestDuales; i++) {
-      const etiqueta = etiquetasBase[i]
-      if (etiqueta.startsWith('Y')) {
-        const indice = parseInt(etiqueta.substring(1)) - 1
-        if (indice >= 0 && indice < solucionDual.length) {
-          solucionDual[indice] = tabla[i][nVarDuales + mRestDuales]
+        // Extraer solución del problema dual
+        const solucionDual = new Array(nVarDuales + mRestDuales).fill(0)
+        
+        for (let i = 0; i < mRestDuales; i++) {
+          const etiqueta = etiquetasBase[i]
+          if (etiqueta.startsWith('Y')) {
+            const indice = parseInt(etiqueta.substring(1)) - 1
+            if (indice >= 0 && indice < solucionDual.length) {
+              solucionDual[indice] = tabla[i][nVarDuales + mRestDuales]
+            }
+          }
         }
+
+        // Calcular valor óptimo del dual
+        let valorZDual = tabla[mRestDuales][nVarDuales + mRestDuales]
+        
+        // Ajustar signo según el tipo de problema
+        if (tipoDual === 'min') {
+          valorZDual = -valorZDual  // Convertir de vuelta porque usamos forma de maximización
+        }
+
+        console.log('=== SOLUCIÓN DUAL ===')
+        console.log('Solución dual:', solucionDual)
+        console.log('Valor Z dual (antes de ajuste):', tabla[mRestDuales][nVarDuales + mRestDuales])
+        console.log('Valor Z dual (final):', valorZDual)
+
+        // Por el teorema de dualidad fuerte: Z_primal = Z_dual
+        // Pero como estamos resolviendo el dual, el valor que obtenemos es para el dual
+        // El valor del primal original es el mismo (en valor absoluto, ajustando signos)
+        let valorZPrimal = valorZDual
+        
+        // Si el problema original era de maximización y obtuvimos el dual (minimización)
+        // el valor óptimo es el mismo
+        if (tipoZ === 'max' && tipoDual === 'min') {
+          valorZPrimal = Math.abs(valorZDual)
+        } else if (tipoZ === 'min' && tipoDual === 'max') {
+          valorZPrimal = Math.abs(valorZDual)
+        }
+
+        console.log('Valor Z primal (resultado final):', valorZPrimal)
+
+        // Preparar variables para mostrar (solo las principales del dual)
+        const variablesDuales = {}
+        for (let i = 0; i < nVarDuales; i++) {
+          variablesDuales[`y${i + 1}`] = solucionDual[i] || 0
+        }
+
+        setSolution({
+          tipo: 'optima',
+          valorZ: valorZPrimal,
+          variables: variablesDuales,
+          iteraciones: iteracion - 1
+        })
+        setIterations(iteracionesTemp)
+        
+      } catch (error) {
+        console.error('Error en DualSolver:', error)
+        setSolution({
+          tipo: 'error',
+          message: `Error: ${error.message}`
+        })
+      } finally {
+        setIsCalculating(false)
       }
+    }, 100)
+  }, [problemData])
+
+  // Memoizar información del problema
+  const problemInfo = useMemo(() => {
+    if (!problemData) return null
+    return {
+      variables: problemData.numVariables,
+      restricciones: problemData.numRestricciones,
+      tipo: problemData.tipoZ === 'max' ? 'Maximizar' : 'Minimizar'
     }
-
-    // Calcular valor óptimo del dual
-    let valorZDual = tabla[mRestDuales][nVarDuales + mRestDuales]
-    
-    // Ajustar signo según el tipo de problema
-    if (tipoDual === 'min') {
-      valorZDual = -valorZDual  // Convertir de vuelta porque usamos forma de maximización
-    }
-
-    console.log('=== SOLUCIÓN DUAL ===')
-    console.log('Solución dual:', solucionDual)
-    console.log('Valor Z dual (antes de ajuste):', tabla[mRestDuales][nVarDuales + mRestDuales])
-    console.log('Valor Z dual (final):', valorZDual)
-
-    // Por el teorema de dualidad fuerte: Z_primal = Z_dual
-    // Pero como estamos resolviendo el dual, el valor que obtenemos es para el dual
-    // El valor del primal original es el mismo (en valor absoluto, ajustando signos)
-    let valorZPrimal = valorZDual
-    
-    // Si el problema original era de maximización y obtuvimos el dual (minimización)
-    // el valor óptimo es el mismo
-    if (tipoZ === 'max' && tipoDual === 'min') {
-      valorZPrimal = Math.abs(valorZDual)
-    } else if (tipoZ === 'min' && tipoDual === 'max') {
-      valorZPrimal = Math.abs(valorZDual)
-    }
-
-    console.log('Valor Z primal (resultado final):', valorZPrimal)
-
-    // Preparar variables para mostrar (solo las principales del dual)
-    const variablesDuales = {}
-    for (let i = 0; i < nVarDuales; i++) {
-      variablesDuales[`y${i + 1}`] = solucionDual[i] || 0
-    }
-
-    setSolution({
-      tipo: 'optima',
-      valorZ: valorZPrimal,
-      variables: variablesDuales,
-      iteraciones: iteracion - 1
-    })
-    setIterations(iteracionesTemp)
-    setIsCalculating(false)
-  }
+  }, [problemData])
 
   return (
     <motion.div 
@@ -269,15 +289,15 @@ const DualSolver = ({ problemData }) => {
     >
       <h3 className="text-2xl font-bold text-white mb-6">🔧 Calculadora Simplex Dual</h3>
       
-      {problemData ? (
+      {problemInfo ? (
         <div>
           {/* Información del problema */}
           <div className="bg-white/10 rounded-lg p-6 mb-6">
             <p className="text-gray-300 text-lg mb-4">📊 Datos del problema configurados</p>
             <div className="grid grid-cols-2 gap-4 text-white">
-              <p>Variables: {problemData.numVariables}</p>
-              <p>Restricciones: {problemData.numRestricciones}</p>
-              <p>Tipo: {problemData.tipoZ === 'max' ? 'Maximizar' : 'Minimizar'}</p>
+              <p>Variables: {problemInfo.variables}</p>
+              <p>Restricciones: {problemInfo.restricciones}</p>
+              <p>Tipo: {problemInfo.tipo}</p>
             </div>
           </div>
 
@@ -286,8 +306,8 @@ const DualSolver = ({ problemData }) => {
             onClick={resolverSimplexDual}
             disabled={isCalculating}
             className="w-full mb-6 px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-bold rounded-lg transition-all duration-300 disabled:opacity-50"
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
+            whileHover={!isCalculating ? { scale: 1.02 } : {}}
+            whileTap={!isCalculating ? { scale: 0.98 } : {}}
           >
             {isCalculating ? '🔄 Calculando...' : '🚀 Resolver con Simplex Dual'}
           </motion.button>
@@ -357,6 +377,8 @@ const DualSolver = ({ problemData }) => {
       )}
     </motion.div>
   )
-}
+})
+
+DualSolver.displayName = 'DualSolver'
 
 export default DualSolver
